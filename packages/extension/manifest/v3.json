@@ -43,7 +43,7 @@
   "web_accessible_resources": [
     {
       "matches": ["<all_urls>"],
-      "resources": ["inpage.js"]
+      "resources": ["inpage.js", "rpch_crypto_bg.wasm"]
     }
   ]
 }
