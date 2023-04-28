@@ -160,4 +160,7 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
     sourceMapFilename: "../sourcemaps/[file].map",
   },
+  experiments: {
+    asyncWebAssembly: true,
+  },
 }
