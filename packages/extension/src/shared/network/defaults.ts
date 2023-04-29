@@ -20,7 +20,7 @@ export const defaultNetworks: Network[] = [
     id: "rpch-goerli-alpha",
     name: "Testnet (RPCh)",
     chainId: "SN_GOERLI",
-    baseUrl: "https://primary.gnosis-chain.rpc.hoprtech.net",
+    baseUrl: "https://alpha4.starknet.io",
     explorerUrl: "https://goerli.voyager.online",
     accountClassHash: {
       argentAccount:
@@ -36,7 +36,6 @@ export const defaultNetworks: Network[] = [
       "0x05754af3760f3356da99aea5c3ec39ccac7783d925a19666ebbeca58ff0087f4",
     readonly: true,
   },
-
   {
     id: "mainnet-alpha",
     name: "Mainnet",

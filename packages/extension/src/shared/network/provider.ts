@@ -5,28 +5,29 @@ import {
   GatewayError,
   HttpError,
   LibraryError,
+  Sequencer,
   SequencerProvider,
   buildUrl,
 } from "starknet"
 import { SequencerProvider as SequencerProviderv4 } from "starknet4"
 import { parse, parseAlwaysAsBig, stringify } from "starknet4/dist/utils/json"
+import urljoin from "url-join"
 
+import { Block } from "../../../../../../starknet.js/src/provider/utils"
 import { Network } from "./type"
 
 let p: SequencerRpchProvider
 
 const getProviderForBaseUrl = memoize((baseUrl: string) => {
-  console.log("getProviderForBaseUrl", baseUrl, baseUrl.endsWith("rpch.tech"))
-  if (baseUrl.endsWith("rpch.tech")) {
-    return new SequencerRpchProvider({ baseUrl })
-  } else {
-    return new SequencerProvider({ baseUrl })
-  }
+  return new SequencerProvider({ baseUrl })
 })
 
 export function getProvider(network: Network) {
-  console.info("get provider classic")
-  // return getProviderForBaseUrl(network.baseUrl)
+  // classic
+  if (network.id !== "rpch-goerli-alpha") {
+    return getProviderForBaseUrl(network.baseUrl)
+  }
+  // RPCh
   if (p) {
     return p
   }
@@ -59,6 +60,8 @@ function createAsyncKeyValStore() {
 
 const store = createAsyncKeyValStore()
 
+//export type SequencerHttpMethod = 'POST' | 'GET';
+
 class SequencerRpchProvider extends SequencerProvider {
   private sdk: SDK
 
@@ -69,9 +72,9 @@ class SequencerRpchProvider extends SequencerProvider {
       {
         crypto: RPChCrypto,
         client: "trial",
-        timeout: 2000,
-        discoveryPlatformApiEndpoint: "http://34.116.20855:3020",
-        // discoveryPlatformApiEndpoint: "https://staging.discovery.rpch.tech",
+        timeout: 200000,
+        //discoveryPlatformApiEndpoint: "http://34.116.20855:3020",
+        discoveryPlatformApiEndpoint: "https://staging.discovery.rpch.tech",
       },
       store.set,
       store.get,
@@ -92,38 +95,162 @@ class SequencerRpchProvider extends SequencerProvider {
   //   })
   // }
 
-  public async fetch(
+  private getFetchUrlRpch(endpoint: keyof Sequencer.Endpoints) {
+    const gatewayUrlEndpoints = ["add_transaction"]
+    return gatewayUrlEndpoints.includes(endpoint)
+      ? this.gatewayUrl
+      : this.feederGatewayUrl
+  }
+
+  private getFetchMethodRpch(endpoint: keyof Sequencer.Endpoints) {
+    const postMethodEndpoints = [
+      "add_transaction",
+      "call_contract",
+      "estimate_fee",
+      "estimate_message_fee",
+      "estimate_fee_bulk",
+      "simulate_transaction",
+    ]
+
+    return postMethodEndpoints.includes(endpoint) ? "POST" : "GET"
+  }
+
+  private isEmptyQueryObjectRpch(obj?: Record<any, any>): obj is undefined {
+    return (
+      obj === undefined ||
+      Object.keys(obj).length === 0 ||
+      (Object.keys(obj).length === 1 &&
+        Object.entries(obj).every(
+          ([k, v]) => k === "blockIdentifier" && v === null,
+        ))
+    )
+  }
+
+  private getQueryStringRpch(query?: Record<string, any>): string {
+    if (this.isEmptyQueryObjectRpch(query)) {
+      return ""
+    }
+    const queryString = Object.entries(query)
+      .map(([key, value]) => {
+        if (key === "blockIdentifier") {
+          const block = new Block(value)
+          return `${block.queryIdentifier}`
+          //return value;
+        }
+        return `${key}=${value}`
+      })
+      .join("&")
+
+    return `?${queryString}`
+  }
+
+  protected async fetchEndpoint<T extends keyof Sequencer.Endpoints>(
+    endpoint: T,
+    // typescript type magic to create a nice fitting function interface
+    ...[query, request]: Sequencer.Endpoints[T]["QUERY"] extends never
+      ? Sequencer.Endpoints[T]["REQUEST"] extends never
+        ? [] // when no query and no request is needed, we can omit the query and request parameters
+        : [undefined, Sequencer.Endpoints[T]["REQUEST"]]
+      : Sequencer.Endpoints[T]["REQUEST"] extends never
+      ? [Sequencer.Endpoints[T]["QUERY"]] // when no request is needed, we can omit the request parameter
+      : [Sequencer.Endpoints[T]["QUERY"], Sequencer.Endpoints[T]["REQUEST"]] // when both query and request are needed, we cant omit anything
+  ): Promise<Sequencer.Endpoints[T]["RESPONSE"]> {
+    const baseUrl = this.getFetchUrlRpch(endpoint)
+    const method = this.getFetchMethodRpch(endpoint)
+    const queryString = this.getQueryStringRpch(query)
+    const url = urljoin(baseUrl, endpoint, queryString)
+
+    if (endpoint === "add_transaction") {
+      return this.fetchRpch(url, {
+        method,
+        body: request,
+      })
+    } else {
+      return this.fetch(url, {
+        method,
+        body: request,
+      })
+    }
+  }
+
+  private getHeadersRpch(
+    method: "GET" | "POST",
+  ): Record<string, string> | undefined {
+    if (method === "POST") {
+      return {
+        "Content-Type": "application/json",
+        ...this.headers,
+      }
+    }
+    //@ts-expect-error err
+    return this.headers
+  }
+
+  public async fetchRpch(
     endpoint: string,
     options?: {
-      method?: "POST" | "GET"
+      method?: "GET" | "POST"
       body?: any
       parseAlwaysAsBigInt?: boolean
     },
   ): Promise<any> {
     const url = buildUrl(this.baseUrl, "", endpoint)
     const method = options?.method ?? "GET"
-    // @ts-expect-error err
-    const headers = this.getHeaders(method)
+    const headers = this.getHeadersRpch(method)
+    const body = stringify(options?.body)
 
     let response: Response
-    console.info("IM WORKING!!!!!")
     try {
-      if (method === "GET") {
-        const body = stringify(options?.body)
-        response = await fetch(url, {
-          method,
-          body,
-          headers,
-        })
-      } else {
-        const rpchReq = await this.sdk.createRequest(
-          url,
-          stringify(options?.body),
-        )
-        // @ts-expect-error err
-        response = await this.sdk.sendRequest(rpchReq)
+      const rpchReq = await this.sdk.createRequest(url, body)
+      // @ts-expect-error err
+      response = await this.sdk.sendRequest(rpchReq)
+
+      const textResponse = await response.text()
+
+      if (!response.ok) {
+        // This will allow the user to handle contract errors
+        let responseBody: any
+        try {
+          responseBody = parse(textResponse)
+        } catch {
+          throw new HttpError(response.statusText, response.status)
+        }
+        throw new GatewayError(responseBody.message, responseBody.code)
       }
 
+      const parseChoice = options?.parseAlwaysAsBigInt
+        ? parseAlwaysAsBig
+        : parse
+      return parseChoice(textResponse)
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof LibraryError)) {
+        throw Error(
+          `Could not ${method} from endpoint \`${url}\`: ${error.message}`,
+        )
+      }
+
+      throw error
+    }
+  }
+
+  public async fetch(
+    endpoint: string,
+    options?: {
+      method?: "GET" | "POST"
+      body?: any
+      parseAlwaysAsBigInt?: boolean
+    },
+  ): Promise<any> {
+    const url = buildUrl(this.baseUrl, "", endpoint)
+    const method = options?.method ?? "GET"
+    const headers = this.getHeadersRpch(method)
+    const body = stringify(options?.body)
+    try {
+      const response = await fetch(url, {
+        method,
+        body,
+        headers,
+      })
       const textResponse = await response.text()
 
       if (!response.ok) {

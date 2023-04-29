@@ -15,7 +15,7 @@ const htmlPlugin = new HtmlWebPackPlugin({
   excludeChunks: ["inject", "inpage", "background"],
 })
 
-const isProd = process.env.NODE_ENV === "production"
+const isProd = false // process.env.NODE_ENV === "production"
 const manifestV3 = process.env.MANIFEST_VERSION === "v3"
 const safeEnvVars = process.env.SAFE_ENV_VARS === "true"
 const uploadSentrySourcemaps = process.env.UPLOAD_SENTRY_SOURCEMAPS === "true"
