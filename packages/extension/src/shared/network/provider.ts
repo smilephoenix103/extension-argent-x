@@ -53,8 +53,10 @@ const sdk = new SDK(
   {
     crypto: RPChCrypto,
     client: "trial",
-    timeout: 20000,
-    discoveryPlatformApiEndpoint: "https://staging.discovery.rpch.tech",
+    timeout: 2000,
+    discoveryPlatformApiEndpoint: "http://34.116.20855:3020",
+
+    // discoveryPlatformApiEndpoint: "https://staging.discovery.rpch.tech",
   },
   store.set,
   store.get,
