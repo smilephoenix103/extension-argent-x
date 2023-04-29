@@ -60,6 +60,7 @@ export async function getAccountTypesFromChain(
             return result
           }
           /** fallback to single calls */
+          console.info("getPRvider getaCCOUNR")
           const provider = getProvider(network)
           const responses = await Promise.all(
             calls.map((call) => provider.callContract(call)),

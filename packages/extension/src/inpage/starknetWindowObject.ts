@@ -74,6 +74,7 @@ export const starknetWindowObject: StarknetWindowObject = {
 
     const { address, network } = walletAccount
 
+    console.info("picking provider")
     if (starknetVersion === "v4") {
       const provider = getProvider(network)
       ;(starknet as any).starknetJsVersion = "v4"

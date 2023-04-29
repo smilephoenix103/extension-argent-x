@@ -673,6 +673,7 @@ export class Wallet {
     selector: BaseWalletAccount,
     useLatest = false,
   ): Promise<Account | Accountv4> {
+    console.info("getStarknetAccount")
     if (!(await this.isSessionOpen())) {
       throw Error("no open session")
     }

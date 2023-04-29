@@ -89,6 +89,7 @@ window.addEventListener(
 
           starknet.selectedAddress = address
           starknet.chainId = network.chainId
+          console.info("getProvider starknet")
           starknet.provider = getProvider(network)
           starknet.account = new ArgentXAccount(address, starknet.provider)
           for (const userEvent of userEventHandlers) {

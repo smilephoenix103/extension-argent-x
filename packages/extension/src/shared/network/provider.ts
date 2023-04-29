@@ -13,7 +13,10 @@ import { parse, parseAlwaysAsBig, stringify } from "starknet4/dist/utils/json"
 
 import { Network } from "./type"
 
+let p: SequencerRpchProvider
+
 const getProviderForBaseUrl = memoize((baseUrl: string) => {
+  console.log("getProviderForBaseUrl", baseUrl, baseUrl.endsWith("rpch.tech"))
   if (baseUrl.endsWith("rpch.tech")) {
     return new SequencerRpchProvider({ baseUrl })
   } else {
@@ -22,7 +25,13 @@ const getProviderForBaseUrl = memoize((baseUrl: string) => {
 })
 
 export function getProvider(network: Network) {
-  return getProviderForBaseUrl(network.baseUrl)
+  console.info("get provider classic")
+  // return getProviderForBaseUrl(network.baseUrl)
+  if (p) {
+    return p
+  }
+  p = new SequencerRpchProvider({ baseUrl: network.baseUrl })
+  return p
 }
 
 const getProviderV4ForBaseUrl = memoize((baseUrl: string) => {
@@ -30,6 +39,7 @@ const getProviderV4ForBaseUrl = memoize((baseUrl: string) => {
 })
 
 export function getProviderv4(network: Network) {
+  console.log("get provider v4")
   return getProviderV4ForBaseUrl(network.baseUrl)
 }
 
@@ -49,20 +59,28 @@ function createAsyncKeyValStore() {
 
 const store = createAsyncKeyValStore()
 
-const sdk = new SDK(
-  {
-    crypto: RPChCrypto,
-    client: "trial",
-    timeout: 2000,
-    discoveryPlatformApiEndpoint: "http://34.116.20855:3020",
-
-    // discoveryPlatformApiEndpoint: "https://staging.discovery.rpch.tech",
-  },
-  store.set,
-  store.get,
-)
-
 class SequencerRpchProvider extends SequencerProvider {
+  private sdk: SDK
+
+  constructor(ops: any) {
+    super(ops)
+
+    this.sdk = new SDK(
+      {
+        crypto: RPChCrypto,
+        client: "trial",
+        timeout: 2000,
+        discoveryPlatformApiEndpoint: "http://34.116.20855:3020",
+        // discoveryPlatformApiEndpoint: "https://staging.discovery.rpch.tech",
+      },
+      store.set,
+      store.get,
+    )
+
+    this.sdk.start()
+    this.sdk.debug.enable("rpch:*")
+    console.info("SDK init", this.sdk)
+  }
   // public fetch(method: any, params: any): Promise<any> {
   //   return new Promise(() => {
   //     // sdk.start();
@@ -88,7 +106,7 @@ class SequencerRpchProvider extends SequencerProvider {
     const headers = this.getHeaders(method)
 
     let response: Response
-
+    console.info("IM WORKING!!!!!")
     try {
       if (method === "GET") {
         const body = stringify(options?.body)
@@ -98,11 +116,12 @@ class SequencerRpchProvider extends SequencerProvider {
           headers,
         })
       } else {
-        await sdk.start()
-        const rpchReq = await sdk.createRequest(url, stringify(options?.body))
+        const rpchReq = await this.sdk.createRequest(
+          url,
+          stringify(options?.body),
+        )
         // @ts-expect-error err
-        response = await sdk.sendRequest(rpchReq)
-        await sdk.stop()
+        response = await this.sdk.sendRequest(rpchReq)
       }
 
       const textResponse = await response.text()

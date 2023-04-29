@@ -1,6 +1,7 @@
 import { ethers } from "ethers"
 
 export const getDefaultEthersProvider = (networkId: string) => {
+  console.info("hello world", networkId)
   return ethers.getDefaultProvider(
     networkId === "mainnet-alpha" ? "mainnet" : "goerli",
   )

@@ -277,3 +277,6 @@ messageStream.subscribe(handleMessage)
 // open onboarding flow on initial install
 
 initOnboarding()
+
+console.log("this is a log")
+console.info("this is a info")

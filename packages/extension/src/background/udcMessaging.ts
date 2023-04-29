@@ -45,6 +45,7 @@ export const handleUdcMessaging: HandleMessage<UdcMessage> = async ({
 
       const network = await getNetwork(networkId)
       const provider = getProvider(network)
+      console.info("udcMEssagfing")
 
       try {
         if ("getClassByHash" in provider) {

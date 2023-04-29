@@ -20,6 +20,7 @@ export const getPreDeployedAccount = async (
   index = 0,
 ): Promise<AccountInterface | null> => {
   try {
+    console.info("getPreDeployedAccount")
     const preDeployedAccounts = await fetch(
       urlJoin(network.baseUrl, "predeployed_accounts"),
     ).then((x) => x.json() as Promise<PreDeployedAccount[]>)
