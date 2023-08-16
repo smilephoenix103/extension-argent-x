@@ -31,7 +31,7 @@
     "dev:ui": "NODE_ENV=development lerna run dev:ui --parallel",
     "build-storybook": "lerna run build-storybook --",
     "clean": "rm -rf packages/extension/dist packages/get-starket/dist",
-    "build": "lerna run build --stream",
+    "build": "lerna run build",
     "build:sourcemaps": "GEN_SOURCE_MAPS=true lerna run build",
     "lint": "lerna run lint --stream",
     "test": "lerna run test --stream",
